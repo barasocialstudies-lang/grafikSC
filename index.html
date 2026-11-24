@@ -327,6 +327,21 @@
             position: relative;
         }
 
+        .svg-tooltip {
+            position: absolute;
+            pointer-events: none;
+            background: rgba(15, 23, 42, 0.95);
+            color: #ffffff;
+            padding: 10px 12px;
+            border-radius: 8px;
+            font-size: 0.78rem;
+            box-shadow: 0 6px 16px rgba(0, 0, 0, 0.22);
+            z-index: 20;
+            display: none;
+            min-width: 195px;
+            border: 1px solid rgba(255, 255, 255, 0.15);
+        }
+
         .chart-legend {
             display: flex;
             flex-wrap: wrap;
@@ -779,16 +794,18 @@
                 <div class="card-header">
                     <div class="card-title">📊 Simulasi Tren Belanja Produksi vs Pendapatan Penjualan</div>
                     <div class="preset-group">
-                        <button type="button" class="btn btn-emerald" onclick="applyPreset('case1')">Kasus 1: Efisiensi &amp; Laba Naik</button>
-                        <button type="button" class="btn btn-coral" onclick="applyPreset('case2')">Kasus 2: Bahan Naik &amp; Rugi M3</button>
-                        <button type="button" class="btn btn-outline" onclick="applyPreset('reset')">Kasus 3: Perusahaan Anda / Reset</button>
+                        <button type="button" class="btn btn-emerald" onclick="applyPreset('case1')">Simulasi Pendapatan &gt; Biaya (Maks 5 Jt)</button>
+                        <button type="button" class="btn btn-navy" onclick="applyPreset('case2')">Efisiensi Bahan &amp; Lonjakan M4–M5</button>
+                        <button type="button" class="btn btn-amber" onclick="applyPreset('case3')">Rugi Awal Lalu Untung (BEP)</button>
+                        <button type="button" class="btn btn-outline" onclick="applyPreset('reset')">Reset Nol</button>
                     </div>
                 </div>
 
                 <div class="sim-grid">
                     <!-- Area Grafik SVG Interaktif -->
                     <div>
-                        <div class="chart-box">
+                        <div class="chart-box" id="simChartContainer">
+                            <div id="simTooltip" class="svg-tooltip"></div>
                             <svg id="simChartSvg" class="chart-svg" viewBox="0 0 680 390" aria-label="Grafik Garis Keuangan Minggu 1 sampai 5"></svg>
                             <div class="chart-legend">
                                 <div class="legend-item"><span class="dot-emerald"></span> Pendapatan Penjualan (Rp)</div>
@@ -822,7 +839,7 @@
                     <!-- Kontrol Slider & Input Angka M1 - M5 -->
                     <div>
                         <div style="font-size: 0.82rem; color: var(--slate-600); margin-bottom: 10px; background: var(--slate-50); padding: 8px 12px; border-radius: 8px; border: 1px solid var(--slate-200);">
-                            💡 <strong>Cara Simulasi:</strong> Geser slider atau ketik nominal Rupiah (kelipatan Rp 10.000, maks Rp 500.000) untuk melihat perubahan bentuk grafik secara langsung.
+                            💡 <strong>Cara Simulasi:</strong> Geser slider atau ketik nominal Rupiah (kelipatan Rp 100.000, maks Rp 5.000.000). Arahkan kursor pada titik grafik untuk melihat detail laba &amp; margin tiap minggu.
                         </div>
                         <div id="weekControlsContainer" class="week-controls-list"></div>
                     </div>
@@ -838,17 +855,17 @@
                 <div class="card-header">
                     <div class="card-title">✏️ Latihan Menggambar Grafik Mandiri (Canvas Plotter)</div>
                     <div class="preset-group">
-                        <button type="button" class="btn btn-amber" onclick="generateNewPlotProblem()">🔄 Soal Baru</button>
-                        <button type="button" class="btn btn-outline" onclick="undoLastPoint()">↩️ Hapus Titik Terakhir (Undo)</button>
-                        <button type="button" class="btn btn-outline" onclick="clearPlotter()">🗑️ Bersihkan Kanvas</button>
+                        <button type="button" class="btn btn-amber" onclick="generateNewPlotProblem()">🔄 Ganti Soal Acak</button>
+                        <button type="button" class="btn btn-outline" onclick="undoLastPoint()">↩️ Undo Titik</button>
+                        <button type="button" class="btn btn-outline" onclick="clearPlotter()">🗑️ Hapus Semua</button>
                         <button type="button" class="btn btn-navy" onclick="checkUserGraph()">✅ Periksa Grafik Saya</button>
                     </div>
                 </div>
 
-                <!-- Tabel Data Soal Studi Kasus -->
-                <p style="font-size: 0.85rem; color: var(--slate-700); margin-bottom: 8px;">
-                    <strong>Tugasmu:</strong> Perhatikan tabel data keuangan <em>Student Company</em> di bawah ini, lalu gambarlah kedua garis grafiknya dengan cara <strong>mengklik langsung pada titik perpotongan grid</strong> di bidang Kartesius!
-                </p>
+                <!-- Kotak Soal Cerita Kasus SC -->
+                <div id="plotterStoryBox" style="font-size: 0.85rem; color: var(--slate-700); margin-bottom: 12px; background: var(--emerald-bg); border: 1px solid var(--emerald-border); padding: 10px 14px; border-radius: 10px;">
+                    <strong>📖 Studi Kasus Student Company SMP Pembangunan Jaya:</strong> <span id="plotterStoryText">Memuat studi kasus...</span>
+                </div>
 
                 <div style="overflow-x: auto;">
                     <table class="data-table" id="plotterProblemTable">
@@ -936,7 +953,7 @@
                 </div>
 
                 <!-- Identitas Siswa -->
-                <div class="form-grid">
+                <div class="form-grid" style="grid-template-columns: repeat(4, 1fr);">
                     <div class="form-group">
                         <label for="studentName">Nama Lengkap Murid</label>
                         <input type="text" id="studentName" class="form-control" placeholder="Ketik nama lengkapmu...">
@@ -954,6 +971,19 @@
                     <div class="form-group">
                         <label for="companyName">Nama Perusahaan SC</label>
                         <input type="text" id="companyName" class="form-control" placeholder="Contoh: PT Jaya Kreasi SC">
+                    </div>
+                    <div class="form-group">
+                        <label for="studentRole">Peran / Jabatan di SC</label>
+                        <select id="studentRole" class="form-control">
+                            <option value="">-- Pilih Jabatan --</option>
+                            <option value="President Director">President Director</option>
+                            <option value="Secretary of Director">Secretary of Director</option>
+                            <option value="VP / Staff Finance">VP / Staff Finance</option>
+                            <option value="VP / Staff Production">VP / Staff Production</option>
+                            <option value="VP / Staff Marketing">VP / Staff Marketing</option>
+                            <option value="VP / Staff HR">VP / Staff HR</option>
+                            <option value="VP / Staff PR">VP / Staff PR</option>
+                        </select>
                     </div>
                 </div>
 
@@ -975,33 +1005,20 @@
 
                     <div class="quiz-grid">
                         <div class="quiz-card">
-                            <label for="qMaxProfitWeek">1. Pada minggu ke berapa perusahaan memperoleh LABA tertinggi?</label>
-                            <select id="qMaxProfitWeek" class="form-control">
-                                <option value="">-- Pilih Minggu --</option>
-                                <option value="0">Minggu 1</option>
-                                <option value="1">Minggu 2</option>
-                                <option value="2">Minggu 3</option>
-                                <option value="3">Minggu 4</option>
-                                <option value="4">Minggu 5</option>
-                            </select>
+                            <label for="qMaxProfitWeek">1. Berapa selisih LABA BERSIH perusahaan pada Minggu ke-5 (Rp)?</label>
+                            <input type="text" id="qMaxProfitWeek" class="form-control" placeholder="Contoh: 2.600.000">
                             <div id="resQ1" class="quiz-result"></div>
                         </div>
 
                         <div class="quiz-card">
-                            <label for="qSharpestCostChange">2. Perubahan Belanja Produksi paling tajam terjadi pada transisi...</label>
-                            <select id="qSharpestCostChange" class="form-control">
-                                <option value="">-- Pilih Transisi Minggu --</option>
-                                <option value="1">Minggu 1 ke Minggu 2</option>
-                                <option value="2">Minggu 2 ke Minggu 3</option>
-                                <option value="3">Minggu 3 ke Minggu 4</option>
-                                <option value="4">Minggu 4 ke Minggu 5</option>
-                            </select>
+                            <label for="qTotalRevenue5W">2. Berapa TOTAL PENDAPATAN PENJUALAN selama 5 minggu (M1–M5) dalam Rp?</label>
+                            <input type="text" id="qTotalRevenue5W" class="form-control" placeholder="Contoh: 13.500.000">
                             <div id="resQ2" class="quiz-result"></div>
                         </div>
 
                         <div class="quiz-card">
-                            <label for="qTotalNetProfit">3. Berapa Total Laba / Rugi Kumulatif (Minggu 1 – 5) dalam Rp?</label>
-                            <input type="number" step="10000" id="qTotalNetProfit" class="form-control" placeholder="Contoh: 250000 atau -50000">
+                            <label for="qRevGrowthNominal">3. Berapa kenaikan nominal Pendapatan dari Minggu ke-1 hingga Minggu ke-5 (Rp)?</label>
+                            <input type="text" id="qRevGrowthNominal" class="form-control" placeholder="Contoh: 3.400.000">
                             <div id="resQ3" class="quiz-result"></div>
                         </div>
                     </div>
@@ -1012,21 +1029,15 @@
                     <h3 style="font-size: 0.95rem; font-weight: 800; color: var(--navy); margin-bottom: 10px;">B. Analisis Ekonomi &amp; Pengambilan Keputusan (IPS)</h3>
 
                     <div class="reflection-item">
-                        <label for="refCostFactor">1. Analisis Belanja Produksi (Faktor Ekonomi):</label>
-                        <p class="reflection-hint">Mengapa belanja produksi pada grafik bisa mengalami kenaikan atau penurunan tajam? Hubungkan dengan konsep kelangkaan bahan baku, efisiensi produksi, atau jumlah target unit produksi!</p>
-                        <textarea id="refCostFactor" class="form-control" rows="2" placeholder="Tuliskan analisismu dengan bahasa sendiri..."></textarea>
-                    </div>
-
-                    <div class="reflection-item">
-                        <label for="refRevStrategy">2. Strategi Pemasaran untuk Menaikkan Pendapatan:</label>
-                        <p class="reflection-hint">Berdasarkan tren garis pendapatan di atas, strategi promosi, penetapan harga, atau saluran distribusi apa yang berhasil/perlu dilakukan agar garis pendapatan terus naik?</p>
-                        <textarea id="refRevStrategy" class="form-control" rows="2" placeholder="Tuliskan strategi pemasaranmu..."></textarea>
+                        <label for="refCostFactor">1. Faktor Efisiensi Biaya Produksi (IPS):</label>
+                        <p class="reflection-hint">Bagaimana strategi perusahaan dalam mengelola belanja produksi agar tetap lebih rendah daripada pendapatan penjualan (misal: pembelian bahan baku grosir, pengurangan sisa bahan, atau pembagian kerja)?</p>
+                        <textarea id="refCostFactor" class="form-control" rows="2" placeholder="Tuliskan analisis efisiensi biaya produksimu..."></textarea>
                     </div>
 
                     <div class="reflection-item" style="margin-bottom: 0;">
-                        <label for="refLiquidation">3. Keputusan Menjelang Penutupan / Likuidasi di Minggu Ke-5:</label>
-                        <p class="reflection-hint">Melihat posisi akhir grafik pada Minggu ke-5, keputusan tanggung jawab apa yang harus diambil tim SC terkait sisa stok produk, pelunasan biaya, dan pembagian hasil kepada pemegang saham?</p>
-                        <textarea id="refLiquidation" class="form-control" rows="2" placeholder="Tuliskan keputusan likuidasi tim SC..."></textarea>
+                        <label for="refRevStrategy">2. Strategi Pemasaran &amp; Peningkatan Permintaan Pasar (IPS):</label>
+                        <p class="reflection-hint">Berdasarkan tren garis pendapatan yang terus meningkat hingga Rp 4.600.000, strategi promosi, penetapan harga, atau saluran distribusi apa yang berhasil menarik minat pembeli?</p>
+                        <textarea id="refRevStrategy" class="form-control" rows="2" placeholder="Tuliskan strategi pemasaranmu dengan bahasa sendiri..."></textarea>
                     </div>
                 </div>
             </div>
@@ -1041,22 +1052,24 @@
         // STATE & KONSTANTA GLOBAL
         // =========================================================================
         const WEEKS = ['Minggu 1', 'Minggu 2', 'Minggu 3', 'Minggu 4', 'Minggu 5'];
-        const MAX_Y = 500000; // Skala maksimal Sumbu Y: Rp 500.000
-        const STEP_Y = 50000; // Interval grid Y: Rp 50.000
+        const MAX_Y = 5000000;  // Skala maksimal Sumbu Y: Rp 5.000.000
+        const STEP_Y = 500000;  // Interval grid Y: Rp 500.000
+        const SLIDER_STEP = 100000; // Kelipatan slider Mode 1: Rp 100.000
 
-        // Data untuk Mode 1 (Simulasi) & Mode 3 (Analisis)
+        // Data Default Mode 1: Simulasi Untung Sehat (Pendapatan > Biaya Produksi, Maks Rp 5 Jt)
         let simData = {
-            cost: [150000, 180000, 160000, 150000, 140000],
-            rev:  [120000, 200000, 260000, 320000, 380000]
+            cost: [800000, 1100000, 1400000, 1700000, 2000000],
+            rev:  [1200000, 1800000, 2500000, 3400000, 4600000]
         };
 
         // Data untuk Mode 2 (Canvas Plotter Latihan Mandiri)
         let plotterTarget = {
-            cost: [150000, 200000, 250000, 200000, 150000],
-            rev:  [100000, 150000, 250000, 350000, 400000]
+            story: '',
+            cost: [1000000, 1500000, 1500000, 2000000, 2000000],
+            rev:  [1500000, 2500000, 3000000, 4000000, 4500000]
         };
 
-        // Titik yang digambar siswa di Mode 2: array berisi null atau nilai Rp (0..500000) untuk index 0..4
+        // Titik yang digambar siswa di Mode 2: array berisi null atau nilai Rp (0..5.000.000) untuk index 0..4
         let userPlot = {
             cost: [null, null, null, null, null],
             rev:  [null, null, null, null, null]
@@ -1075,8 +1088,27 @@
         }
 
         function formatShortRp(num) {
-            if (num === 0) return '0';
-            return (num / 1000) + 'rb';
+            if (num === 0) return 'Rp 0';
+            if (num >= 1000000) {
+                const jt = num / 1000000;
+                return 'Rp ' + (Number.isInteger(jt) ? jt : jt.toFixed(1).replace('.', ',')) + ' Jt';
+            }
+            return 'Rp ' + (num / 1000) + 'rb';
+        }
+
+        function formatAxisRp(num) {
+            if (num === 0) return 'Rp 0';
+            return 'Rp ' + Math.round(num).toLocaleString('id-ID');
+        }
+
+        function parseNumericRp(str) {
+            if (!str) return NaN;
+            const cleaned = str.toString().trim();
+            const isNeg = cleaned.startsWith('-');
+            const digits = cleaned.replace(/[^0-9]/g, '');
+            if (!digits) return NaN;
+            const val = parseInt(digits, 10);
+            return isNeg ? -val : val;
         }
 
         function showToast(msg) {
@@ -1118,7 +1150,7 @@
             const isCompact = options.compact || false;
             const W = 680;
             const H = isCompact ? 260 : 390;
-            const padL = 74;
+            const padL = 96;
             const padR = 36;
             const padT = 28;
             const padB = 42;
@@ -1133,14 +1165,14 @@
             // Background putih area plot
             html += `<rect x="${padL}" y="${padT}" width="${plotW}" height="${plotH}" fill="#ffffff" stroke="#CBD5E1" stroke-width="1.2"/>`;
 
-            // Grid Horizontal & Label Sumbu Y
-            const stepCount = MAX_Y / STEP_Y;
+            // Grid Horizontal & Label Sumbu Y (Rp 0 s.d. Rp 5.000.000 per kelipatan Rp 500.000)
+            const stepCount = MAX_Y / STEP_Y; // 10 langkah
             for (let s = 0; s <= stepCount; s++) {
                 const val = s * STEP_Y;
                 const y = getY(val);
-                if (isCompact && s % 2 !== 0 && s !== stepCount) continue; // Lebih ringkas di mode mini
+                if (isCompact && s % 2 !== 0 && s !== stepCount) continue;
                 html += `<line x1="${padL}" y1="${y}" x2="${W - padR}" y2="${y}" stroke="${s === 0 ? '#64748B' : '#E2E8F0'}" stroke-width="${s === 0 ? '1.5' : '1'}" stroke-dasharray="${s === 0 ? '' : '4,4'}"/>`;
-                html += `<text x="${padL - 10}" y="${y + 4}" text-anchor="end" font-size="11" font-weight="600" fill="#475569">${val === 0 ? 'Rp 0' : 'Rp ' + (val / 1000) + 'rb'}</text>`;
+                html += `<text x="${padL - 10}" y="${y + 4}" text-anchor="end" font-size="10.5" font-weight="600" fill="#475569">${formatAxisRp(val)}</text>`;
             }
 
             // Grid Vertikal & Label Sumbu X
@@ -1163,14 +1195,12 @@
                 const diff2 = r2 - c2;
 
                 if ((diff1 >= 0 && diff2 >= 0) || (diff1 <= 0 && diff2 <= 0)) {
-                    // Tidak berpotongan di tengah segmen
                     const isProfit = (diff1 + diff2) >= 0;
                     const fillColor = isProfit ? 'rgba(5, 150, 105, 0.16)' : 'rgba(225, 29, 72, 0.16)';
                     html += `<polygon points="${x1},${yr1} ${x2},${yr2} ${x2},${yc2} ${x1},${yc1}" fill="${fillColor}" />`;
-                    if (diff1 === 0) breakEvenPoints.push({ x: x1, y: yr1, label: `M${i + 1}` });
-                    if (i === 3 && diff2 === 0) breakEvenPoints.push({ x: x2, y: yr2, label: `M${i + 2}` });
+                    if (diff1 === 0 && (r1 > 0 || c1 > 0)) breakEvenPoints.push({ x: x1, y: yr1, label: `BEP M${i + 1}` });
+                    if (i === 3 && diff2 === 0 && (r2 > 0 || c2 > 0)) breakEvenPoints.push({ x: x2, y: yr2, label: `BEP M${i + 2}` });
                 } else {
-                    // Garis berpotongan di tengah segmen! Hitung titik potong t in (0, 1)
                     const t = Math.abs(diff1) / (Math.abs(diff1) + Math.abs(diff2));
                     const xm = x1 + t * (x2 - x1);
                     const ym = yc1 + t * (yc2 - yc1);
@@ -1196,36 +1226,98 @@
             breakEvenPoints.forEach(pt => {
                 html += `<circle cx="${pt.x}" cy="${pt.y}" r="6" fill="#F59E0B" stroke="#ffffff" stroke-width="2" />`;
                 if (!isCompact) {
-                    html += `<rect x="${pt.x - 18}" y="${pt.y - 24}" width="36" height="16" rx="4" fill="#1B365D" />`;
-                    html += `<text x="${pt.x}" y="${pt.y - 13}" text-anchor="middle" font-size="9.5" font-weight="800" fill="#ffffff">${pt.label}</text>`;
+                    html += `<rect x="${pt.x - 22}" y="${pt.y - 24}" width="44" height="16" rx="4" fill="#1B365D" />`;
+                    html += `<text x="${pt.x}" y="${pt.y - 13}" text-anchor="middle" font-size="9" font-weight="800" fill="#ffffff">${pt.label}</text>`;
                 }
             });
 
-            // Titik Koordinat & Label Nilai Rupiah
+            // Titik Koordinat, Label Nilai Rupiah & Area Hover Tooltip Interaktif
             for (let i = 0; i < 5; i++) {
                 const x = getX(i);
                 const yc = getY(costArr[i]);
                 const yr = getY(revArr[i]);
 
-                // Hindari tabrakan teks label jika nilai berdekatan
                 const revAbove = yr <= yc;
                 const revLabelY = revAbove ? Math.max(padT + 12, yr - 10) : Math.min(padT + plotH - 6, yr + 18);
                 const costLabelY = !revAbove ? Math.max(padT + 12, yc - 10) : Math.min(padT + plotH - 6, yc + 18);
 
                 // Node Biaya
                 html += `<circle cx="${x}" cy="${yc}" r="5.5" fill="#E11D48" stroke="#ffffff" stroke-width="2" />`;
-                html += `<text x="${x}" y="${costLabelY}" text-anchor="middle" font-size="10.5" font-weight="700" fill="#BE123C">${formatShortRp(costArr[i])}</text>`;
+                html += `<text x="${x}" y="${costLabelY}" text-anchor="middle" font-size="10" font-weight="700" fill="#BE123C">${formatShortRp(costArr[i])}</text>`;
 
                 // Node Pendapatan
                 html += `<circle cx="${x}" cy="${yr}" r="5.5" fill="#059669" stroke="#ffffff" stroke-width="2" />`;
-                html += `<text x="${x}" y="${revLabelY}" text-anchor="middle" font-size="10.5" font-weight="700" fill="#047857">${formatShortRp(revArr[i])}</text>`;
+                html += `<text x="${x}" y="${revLabelY}" text-anchor="middle" font-size="10" font-weight="700" fill="#047857">${formatShortRp(revArr[i])}</text>`;
+
+                // Kolom interaksi hover untuk menampilkan detail tooltip minggu ke-i
+                if (!isCompact) {
+                    const colW = plotW / 4;
+                    html += `<rect x="${x - colW / 2}" y="${padT}" width="${colW}" height="${plotH}" fill="transparent" style="cursor: pointer;" onmouseenter="showSimTooltip(event, ${i})" onmousemove="moveSimTooltip(event)" onmouseleave="hideSimTooltip()" />`;
+                }
             }
 
             svg.innerHTML = html;
         }
 
+        // Tooltip Interaktif Mode 1
+        function showSimTooltip(e, weekIdx) {
+            const tooltip = document.getElementById('simTooltip');
+            if (!tooltip) return;
+
+            const cost = simData.cost[weekIdx];
+            const rev = simData.rev[weekIdx];
+            const profit = rev - cost;
+            const margin = rev > 0 ? ((profit / rev) * 100).toFixed(1) : '0.0';
+            const statusColor = profit > 0 ? '#34D399' : (profit < 0 ? '#FB7185' : '#CBD5E1');
+            const statusLabel = profit > 0 ? 'LABA' : (profit < 0 ? 'RUGI' : 'IMPAS');
+
+            tooltip.innerHTML = `
+                <div style="font-weight: 800; font-size: 0.85rem; margin-bottom: 5px; border-bottom: 1px solid rgba(255,255,255,0.15); padding-bottom: 4px; display: flex; justify-content: space-between;">
+                    <span>${WEEKS[weekIdx]}</span>
+                    <span style="color: ${statusColor};">${statusLabel}</span>
+                </div>
+                <div style="display: flex; justify-content: space-between; margin-bottom: 3px;">
+                    <span style="color: #6EE7B7;">Pendapatan:</span>
+                    <strong>${formatRp(rev)}</strong>
+                </div>
+                <div style="display: flex; justify-content: space-between; margin-bottom: 3px;">
+                    <span style="color: #FDA4AF;">Biaya Produksi:</span>
+                    <strong>${formatRp(cost)}</strong>
+                </div>
+                <div style="display: flex; justify-content: space-between; margin-top: 4px; padding-top: 4px; border-top: 1px dashed rgba(255,255,255,0.2);">
+                    <span>Selisih (${margin}%):</span>
+                    <strong style="color: ${statusColor};">${profit > 0 ? '+' : ''}${formatRp(profit)}</strong>
+                </div>
+            `;
+            tooltip.style.display = 'block';
+            moveSimTooltip(e);
+        }
+
+        function moveSimTooltip(e) {
+            const container = document.getElementById('simChartContainer');
+            const tooltip = document.getElementById('simTooltip');
+            if (!container || !tooltip) return;
+
+            const rect = container.getBoundingClientRect();
+            let left = e.clientX - rect.left + 14;
+            let top = e.clientY - rect.top - 10;
+
+            if (left + 210 > rect.width) {
+                left = e.clientX - rect.left - 210;
+            }
+            if (top < 8) top = 8;
+
+            tooltip.style.left = left + 'px';
+            tooltip.style.top = top + 'px';
+        }
+
+        function hideSimTooltip() {
+            const tooltip = document.getElementById('simTooltip');
+            if (tooltip) tooltip.style.display = 'none';
+        }
+
         // =========================================================================
-        // LOGIKA MODE 1: KONTROL SLIDER & PRESET STUDI KASUS
+        // LOGIKA MODE 1: KONTROL SLIDER & PRESET STUDI KASUS (SKALA 5 JUTA)
         // =========================================================================
         function buildWeekControls() {
             const container = document.getElementById('weekControlsContainer');
@@ -1241,13 +1333,13 @@
                     </div>
                     <div class="slider-row">
                         <span class="slider-label-cost">🔴 Biaya Produksi</span>
-                        <input type="range" class="range-cost" id="sliderCost-${i}" min="0" max="${MAX_Y}" step="10000" value="${simData.cost[i]}" oninput="updateSimValue('cost', ${i}, this.value)">
-                        <input type="number" class="num-input-mini" id="inputCost-${i}" min="0" max="${MAX_Y}" step="10000" value="${simData.cost[i]}" onchange="updateSimValue('cost', ${i}, this.value)">
+                        <input type="range" class="range-cost" id="sliderCost-${i}" min="0" max="${MAX_Y}" step="${SLIDER_STEP}" value="${simData.cost[i]}" oninput="updateSimValue('cost', ${i}, this.value)">
+                        <input type="text" inputmode="numeric" class="num-input-mini" id="inputCost-${i}" value="${simData.cost[i].toLocaleString('id-ID')}" onchange="updateSimValue('cost', ${i}, this.value)">
                     </div>
                     <div class="slider-row">
                         <span class="slider-label-rev">🟢 Pendapatan</span>
-                        <input type="range" class="range-rev" id="sliderRev-${i}" min="0" max="${MAX_Y}" step="10000" value="${simData.rev[i]}" oninput="updateSimValue('rev', ${i}, this.value)">
-                        <input type="number" class="num-input-mini" id="inputRev-${i}" min="0" max="${MAX_Y}" step="10000" value="${simData.rev[i]}" onchange="updateSimValue('rev', ${i}, this.value)">
+                        <input type="range" class="range-rev" id="sliderRev-${i}" min="0" max="${MAX_Y}" step="${SLIDER_STEP}" value="${simData.rev[i]}" oninput="updateSimValue('rev', ${i}, this.value)">
+                        <input type="text" inputmode="numeric" class="num-input-mini" id="inputRev-${i}" value="${simData.rev[i].toLocaleString('id-ID')}" onchange="updateSimValue('rev', ${i}, this.value)">
                     </div>
                 `;
                 container.appendChild(card);
@@ -1255,13 +1347,14 @@
         }
 
         function updateSimValue(type, idx, rawVal) {
-            let val = Math.max(0, Math.min(MAX_Y, parseInt(rawVal, 10) || 0));
+            const parsed = parseNumericRp(rawVal);
+            let val = isNaN(parsed) ? 0 : Math.max(0, Math.min(MAX_Y, parsed));
             simData[type][idx] = val;
 
             const slider = document.getElementById(`${type === 'cost' ? 'sliderCost' : 'sliderRev'}-${idx}`);
             const input = document.getElementById(`${type === 'cost' ? 'inputCost' : 'inputRev'}-${idx}`);
             if (slider) slider.value = val;
-            if (input) input.value = val;
+            if (input) input.value = val.toLocaleString('id-ID');
 
             refreshSimulation();
         }
@@ -1294,7 +1387,7 @@
                     }
                 }
 
-                if (diff === 0) {
+                if (diff === 0 && (r > 0 || c > 0)) {
                     bepWeeks.push(`M${i + 1}`);
                 } else if (i < 4) {
                     const nextDiff = simData.rev[i + 1] - simData.cost[i + 1];
@@ -1312,25 +1405,30 @@
             netEl.textContent = (net > 0 ? '+' : '') + formatRp(net);
             netEl.style.color = net > 0 ? 'var(--emerald)' : (net < 0 ? 'var(--coral)' : 'var(--navy)');
 
-            document.getElementById('simBreakEven').textContent = bepWeeks.length > 0 ? bepWeeks.join(', ') : 'Belum tercapai';
+            document.getElementById('simBreakEven').textContent = bepWeeks.length > 0 ? bepWeeks.join(', ') : (net > 0 ? 'Untung sejak M1' : 'Belum tercapai');
         }
 
         function applyPreset(presetName) {
             if (presetName === 'case1') {
-                // Efisiensi Produksi & Laba Meningkat
-                simData.cost = [180000, 170000, 160000, 150000, 140000];
-                simData.rev  = [130000, 200000, 270000, 340000, 420000];
-                showToast('Kasus 1 dimuat: Efisiensi Produksi & Laba Meningkat');
+                // Simulasi Pendapatan > Biaya (Maks 5 Jt)
+                simData.cost = [800000, 1100000, 1400000, 1700000, 2000000];
+                simData.rev  = [1200000, 1800000, 2500000, 3400000, 4600000];
+                showToast('Simulasi Pendapatan > Biaya (Maks Rp 5 Jt) dimuat!');
             } else if (presetName === 'case2') {
-                // Biaya Bahan Naik & Rugi di Minggu 3
-                simData.cost = [140000, 160000, 310000, 210000, 170000];
-                simData.rev  = [160000, 220000, 200000, 280000, 350000];
-                showToast('Kasus 2 dimuat: Lonjakan Biaya Bahan Baku di Minggu 3');
+                // Efisiensi Bahan & Lonjakan M4-M5
+                simData.cost = [1500000, 1400000, 1300000, 1500000, 1600000];
+                simData.rev  = [1600000, 2100000, 2700000, 3800000, 4900000];
+                showToast('Skenario Efisiensi Bahan Baku & Lonjakan Penjualan M4–M5 dimuat!');
+            } else if (presetName === 'case3') {
+                // Rugi Awal Lalu Untung (BEP)
+                simData.cost = [1800000, 1700000, 1600000, 1800000, 2000000];
+                simData.rev  = [1000000, 1700000, 2400000, 3300000, 4400000];
+                showToast('Skenario Rugi Awal Lalu Untung (Titik Impas di Minggu 2) dimuat!');
             } else {
-                // Reset / Perusahaan Anda
-                simData.cost = [100000, 100000, 100000, 100000, 100000];
-                simData.rev  = [100000, 100000, 100000, 100000, 100000];
-                showToast('Data direset ke Rp 100.000 — Silakan masukkan data perusahaanmu!');
+                // Reset Nol
+                simData.cost = [0, 0, 0, 0, 0];
+                simData.rev  = [0, 0, 0, 0, 0];
+                showToast('Semua nominal direset ke Rp 0.');
             }
             buildWeekControls();
             refreshSimulation();
@@ -1342,7 +1440,7 @@
         const PLOT_CFG = {
             W: 720,
             H: 410,
-            padL: 78,
+            padL: 98,
             padR: 40,
             padT: 28,
             padB: 44
@@ -1375,33 +1473,39 @@
         function generateNewPlotProblem() {
             const presets = [
                 {
-                    cost: [150000, 200000, 250000, 200000, 150000],
-                    rev:  [100000, 150000, 250000, 350000, 450000]
+                    story: 'PT Jaya Kuliner SC memproduksi camilan sehat. Berkat promosi media sosial dan paket bundling, pendapatan terus melampaui biaya produksi dari Minggu 1 hingga Minggu 5.',
+                    cost: [1000000, 1500000, 1500000, 2000000, 2000000],
+                    rev:  [1500000, 2500000, 3000000, 4000000, 4500000]
                 },
                 {
-                    cost: [200000, 250000, 300000, 200000, 150000],
-                    rev:  [150000, 250000, 200000, 300000, 400000]
+                    story: 'CV Nusantara Kriya SC berhasil melakukan efisiensi pembelian bahan baku di Minggu 3–4 sehingga biaya produksi terkendali sementara pendapatan penjualan terus melejit.',
+                    cost: [1500000, 1500000, 1000000, 1500000, 2000000],
+                    rev:  [2000000, 2500000, 3000000, 4000000, 5000000]
                 },
                 {
-                    cost: [100000, 150000, 150000, 200000, 150000],
-                    rev:  [150000, 200000, 300000, 350000, 450000]
+                    story: 'PT Kreasi Digital SC membuka sistem pre-order merchandise sekolah. Setiap minggu permintaan meningkat tajam dan laba perusahaan bertambah konsisten.',
+                    cost: [500000, 1000000, 1500000, 2000000, 2500000],
+                    rev:  [1000000, 2000000, 2500000, 3500000, 4500000]
                 },
                 {
-                    cost: [250000, 200000, 150000, 150000, 100000],
-                    rev:  [100000, 200000, 250000, 300000, 400000]
+                    story: 'PT Pangan Lestari SC memasok minuman herbal saat acara bazar sekolah di Minggu 4 dan 5, menghasilkan lonjakan pendapatan hingga Rp 4.500.000.',
+                    cost: [1000000, 1000000, 1500000, 2000000, 2000000],
+                    rev:  [1500000, 2000000, 2500000, 3500000, 4500000]
                 }
             ];
 
-            // Pilih soal acak yang berbeda dari soal sebelumnya
             let candidate;
             do {
                 candidate = presets[Math.floor(Math.random() * presets.length)];
-            } while (JSON.stringify(candidate) === JSON.stringify(plotterTarget));
+            } while (JSON.stringify(candidate.rev) === JSON.stringify(plotterTarget.rev));
 
             plotterTarget = {
+                story: candidate.story,
                 cost: [...candidate.cost],
                 rev: [...candidate.rev]
             };
+
+            document.getElementById('plotterStoryText').textContent = plotterTarget.story;
 
             for (let i = 0; i < 5; i++) {
                 document.getElementById(`prob-cost-${i}`).textContent = formatRp(plotterTarget.cost[i]);
@@ -1457,7 +1561,6 @@
             const plotW = PLOT_CFG.W - PLOT_CFG.padL - PLOT_CFG.padR;
             const plotH = PLOT_CFG.H - PLOT_CFG.padT - PLOT_CFG.padB;
 
-            // Cek apakah di dalam area grid (dengan toleransi pinggir)
             if (svgX < PLOT_CFG.padL - 25 || svgX > PLOT_CFG.padL + plotW + 25 ||
                 svgY < PLOT_CFG.padT - 20 || svgY > PLOT_CFG.padT + plotH + 20) {
                 return null;
@@ -1467,7 +1570,7 @@
             const rawWeek = (svgX - PLOT_CFG.padL) / (plotW / 4);
             const weekIdx = Math.max(0, Math.min(4, Math.round(rawWeek)));
 
-            // Snap ke Kelipatan Rp 50.000 terdekat (0..500.000)
+            // Snap ke Kelipatan Rp 500.000 terdekat (0..5.000.000)
             const stepCount = MAX_Y / STEP_Y; // 10 langkah
             const rawRatio = 1 - ((svgY - PLOT_CFG.padT) / plotH);
             const stepIdx = Math.max(0, Math.min(stepCount, Math.round(rawRatio * stepCount)));
@@ -1493,7 +1596,6 @@
             updatePlotCounters();
             renderPlotterCanvas();
 
-            // Otomatis pindah ke seri Pendapatan jika 5 titik Biaya sudah lengkap terisi
             if (activeSeries === 'cost' && userPlot.cost.every(v => v !== null) && userPlot.rev.every(v => v === null)) {
                 setActiveSeries('rev');
                 showToast('Bagus! Semua titik Biaya sudah lengkap. Lanjutkan menggambar garis Pendapatan!');
@@ -1527,12 +1629,12 @@
             // Latar area Kartesius
             html += `<rect x="${padL}" y="${padT}" width="${plotW}" height="${plotH}" fill="#ffffff" stroke="#94A3B8" stroke-width="1.5"/>`;
 
-            // Garis Grid Horizontal (Rp)
+            // Garis Grid Horizontal (Rp 0 s.d. Rp 5.000.000)
             for (let s = 0; s <= stepCount; s++) {
                 const val = s * STEP_Y;
                 const y = getPlotY(val);
                 html += `<line x1="${padL}" y1="${y}" x2="${W - padR}" y2="${y}" stroke="${s === 0 ? '#334155' : '#CBD5E1'}" stroke-width="${s === 0 ? '1.8' : '1'}" stroke-dasharray="${s === 0 ? '' : '3,3'}"/>`;
-                html += `<text x="${padL - 10}" y="${y + 4}" text-anchor="end" font-size="11" font-weight="700" fill="#334155">${val === 0 ? 'Rp 0' : 'Rp ' + (val / 1000) + 'rb'}</text>`;
+                html += `<text x="${padL - 10}" y="${y + 4}" text-anchor="end" font-size="10.5" font-weight="700" fill="#334155">${formatAxisRp(val)}</text>`;
             }
 
             // Garis Grid Vertikal (Minggu 1 - 5) & Titik Snap Halus
@@ -1541,7 +1643,6 @@
                 html += `<line x1="${x}" y1="${padT}" x2="${x}" y2="${padT + plotH}" stroke="#CBD5E1" stroke-width="1.2"/>`;
                 html += `<text x="${x}" y="${padT + plotH + 24}" text-anchor="middle" font-size="12" font-weight="800" fill="#1B365D">${WEEKS[i]}</text>`;
 
-                // Titik bantu perpotongan grid
                 for (let s = 0; s <= stepCount; s++) {
                     const y = getPlotY(s * STEP_Y);
                     html += `<circle cx="${x}" cy="${y}" r="2.2" fill="#94A3B8" opacity="0.55" />`;
@@ -1585,13 +1686,13 @@
                     const cx = getPlotX(i), cy = getPlotY(userPlot.cost[i]);
                     const isWrong = showAnswerKey && userPlot.cost[i] !== plotterTarget.cost[i];
                     html += `<circle cx="${cx}" cy="${cy}" r="6" fill="#E11D48" stroke="${isWrong ? '#FACC15' : '#ffffff'}" stroke-width="2.5" />`;
-                    html += `<text x="${cx}" y="${cy - 10}" text-anchor="middle" font-size="10.5" font-weight="800" fill="#BE123C">${formatShortRp(userPlot.cost[i])}</text>`;
+                    html += `<text x="${cx}" y="${cy + 18}" text-anchor="middle" font-size="10" font-weight="800" fill="#BE123C">${formatShortRp(userPlot.cost[i])}</text>`;
                 }
                 if (userPlot.rev[i] !== null) {
                     const rx = getPlotX(i), ry = getPlotY(userPlot.rev[i]);
                     const isWrong = showAnswerKey && userPlot.rev[i] !== plotterTarget.rev[i];
                     html += `<circle cx="${rx}" cy="${ry}" r="6" fill="#059669" stroke="${isWrong ? '#FACC15' : '#ffffff'}" stroke-width="2.5" />`;
-                    html += `<text x="${rx}" y="${ry + 18}" text-anchor="middle" font-size="10.5" font-weight="800" fill="#047857">${formatShortRp(userPlot.rev[i])}</text>`;
+                    html += `<text x="${rx}" y="${ry - 10}" text-anchor="middle" font-size="10" font-weight="800" fill="#047857">${formatShortRp(userPlot.rev[i])}</text>`;
                 }
             }
 
@@ -1666,74 +1767,52 @@
         // LOGIKA MODE 3: UJI PEMAHAMAN MATEMATIKA & EKSPOR LEMBAR KERJA
         // =========================================================================
         function checkMathAnswers() {
-            // 1. Minggu Laba Tertinggi
-            let maxProfit = -Infinity;
-            let bestWeeks = [];
-            for (let i = 0; i < 5; i++) {
-                const profit = simData.rev[i] - simData.cost[i];
-                if (profit > maxProfit) {
-                    maxProfit = profit;
-                    bestWeeks = [i];
-                } else if (profit === maxProfit) {
-                    bestWeeks.push(i);
-                }
-            }
-
-            const ans1 = document.getElementById('qMaxProfitWeek').value;
+            // 1. Selisih Laba Bersih pada Minggu ke-5
+            const profitM5 = simData.rev[4] - simData.cost[4];
+            const ans1 = parseNumericRp(document.getElementById('qMaxProfitWeek').value);
             const res1 = document.getElementById('resQ1');
-            if (ans1 === '') {
+
+            if (isNaN(ans1)) {
                 res1.style.color = 'var(--amber)';
-                res1.textContent = '⚠️ Pilih jawaban terlebih dahulu.';
-            } else if (bestWeeks.includes(parseInt(ans1, 10))) {
+                res1.textContent = '⚠️ Masukkan nominal Rupiah terlebih dahulu.';
+            } else if (ans1 === profitM5) {
                 res1.style.color = 'var(--emerald)';
-                res1.textContent = `✅ Tepat! (${formatRp(maxProfit)})`;
+                res1.textContent = `✅ Tepat sekali! (${formatRp(profitM5)})`;
             } else {
                 res1.style.color = 'var(--coral)';
-                res1.textContent = `❌ Kurang tepat. Tertinggi di ${bestWeeks.map(w => WEEKS[w]).join(' / ')}.`;
+                res1.textContent = `❌ Belum tepat. Hitung: Pendapatan M5 (${formatRp(simData.rev[4])}) − Biaya M5 (${formatRp(simData.cost[4])}).`;
             }
 
-            // 2. Transisi perubahan biaya paling tajam (absolut delta terbesar)
-            let maxDelta = -1;
-            let bestTransitions = [];
-            for (let i = 1; i < 5; i++) {
-                const delta = Math.abs(simData.cost[i] - simData.cost[i - 1]);
-                if (delta > maxDelta) {
-                    maxDelta = delta;
-                    bestTransitions = [i];
-                } else if (delta === maxDelta) {
-                    bestTransitions.push(i);
-                }
-            }
-
-            const ans2 = document.getElementById('qSharpestCostChange').value;
+            // 2. Total Pendapatan Penjualan selama 5 minggu (M1-M5)
+            const totalRev = simData.rev.reduce((a, b) => a + b, 0);
+            const ans2 = parseNumericRp(document.getElementById('qTotalRevenue5W').value);
             const res2 = document.getElementById('resQ2');
-            if (ans2 === '') {
+
+            if (isNaN(ans2)) {
                 res2.style.color = 'var(--amber)';
-                res2.textContent = '⚠️ Pilih transisi minggu.';
-            } else if (bestTransitions.includes(parseInt(ans2, 10))) {
+                res2.textContent = '⚠️ Masukkan total pendapatan 5 minggu.';
+            } else if (ans2 === totalRev) {
                 res2.style.color = 'var(--emerald)';
-                res2.textContent = `✅ Tepat! (Selisih ${formatRp(maxDelta)})`;
+                res2.textContent = `✅ Benar! Total Pendapatan = ${formatRp(totalRev)}.`;
             } else {
                 res2.style.color = 'var(--coral)';
-                res2.textContent = `❌ Kurang tepat. Perubahan terbesar: M${bestTransitions[0]} ke M${bestTransitions[0] + 1}.`;
+                res2.textContent = `❌ Belum tepat. Jumlahkan pendapatan M1 + M2 + M3 + M4 + M5.`;
             }
 
-            // 3. Total Laba/Rugi Kumulatif
-            const totalCost = simData.cost.reduce((a, b) => a + b, 0);
-            const totalRev = simData.rev.reduce((a, b) => a + b, 0);
-            const actualNet = totalRev - totalCost;
-
-            const ans3Raw = document.getElementById('qTotalNetProfit').value;
+            // 3. Kenaikan nominal Pendapatan dari Minggu ke-1 hingga Minggu ke-5
+            const revGrowth = simData.rev[4] - simData.rev[0];
+            const ans3 = parseNumericRp(document.getElementById('qRevGrowthNominal').value);
             const res3 = document.getElementById('resQ3');
-            if (ans3Raw === '') {
+
+            if (isNaN(ans3)) {
                 res3.style.color = 'var(--amber)';
-                res3.textContent = '⚠️ Masukkan angka rupiah.';
-            } else if (parseInt(ans3Raw, 10) === actualNet) {
+                res3.textContent = '⚠️ Masukkan nominal selisih kenaikan.';
+            } else if (ans3 === revGrowth) {
                 res3.style.color = 'var(--emerald)';
-                res3.textContent = `✅ Benar sekali! (${formatRp(actualNet)})`;
+                res3.textContent = `✅ Tepat! Naik ${formatRp(revGrowth)} dari M1 ke M5.`;
             } else {
                 res3.style.color = 'var(--coral)';
-                res3.textContent = `❌ Belum tepat. Hitung: Total Pendapatan (${formatRp(totalRev)}) − Total Biaya (${formatRp(totalCost)}).`;
+                res3.textContent = `❌ Belum tepat. Hitung: Pendapatan M5 (${formatRp(simData.rev[4])}) − Pendapatan M1 (${formatRp(simData.rev[0])}).`;
             }
         }
 
@@ -1741,20 +1820,21 @@
             const name = document.getElementById('studentName').value || '-';
             const cls = document.getElementById('studentClass').value || '-';
             const comp = document.getElementById('companyName').value || '-';
+            const role = document.getElementById('studentRole').value || '-';
 
             const totalCost = simData.cost.reduce((a, b) => a + b, 0);
             const totalRev = simData.rev.reduce((a, b) => a + b, 0);
             const net = totalRev - totalCost;
 
-            const q1Sel = document.getElementById('qMaxProfitWeek');
-            const q1Text = q1Sel.value !== '' ? q1Sel.options[q1Sel.selectedIndex].text : '-';
-            const q2Sel = document.getElementById('qSharpestCostChange');
-            const q2Text = q2Sel.value !== '' ? q2Sel.options[q2Sel.selectedIndex].text : '-';
-            const q3Text = document.getElementById('qTotalNetProfit').value ? formatRp(parseInt(document.getElementById('qTotalNetProfit').value, 10)) : '-';
+            const q1Val = parseNumericRp(document.getElementById('qMaxProfitWeek').value);
+            const q1Text = !isNaN(q1Val) ? formatRp(q1Val) : '-';
+            const q2Val = parseNumericRp(document.getElementById('qTotalRevenue5W').value);
+            const q2Text = !isNaN(q2Val) ? formatRp(q2Val) : '-';
+            const q3Val = parseNumericRp(document.getElementById('qRevGrowthNominal').value);
+            const q3Text = !isNaN(q3Val) ? formatRp(q3Val) : '-';
 
             const r1 = document.getElementById('refCostFactor').value || '-';
             const r2 = document.getElementById('refRevStrategy').value || '-';
-            const r3 = document.getElementById('refLiquidation').value || '-';
 
             let tableLines = WEEKS.map((w, i) => {
                 const diff = simData.rev[i] - simData.cost[i];
@@ -1770,6 +1850,7 @@ SMP PEMBANGUNAN JAYA • INTEGRASI IPS & MATEMATIKA
 - Nama Murid      : ${name}
 - Kelas           : ${cls}
 - Nama Perusahaan : ${comp}
+- Peran / Jabatan : ${role}
 
 [DATA GRAFIK KEUANGAN MINGGU 1 – 5]
 ${tableLines}
@@ -1779,19 +1860,16 @@ ${tableLines}
 - Laba / Rugi Kumulatif  : ${net >= 0 ? '+' : ''}${formatRp(net)}
 
 [A. JAWABAN ANALISIS MATEMATIKA]
-1. Minggu dengan laba tertinggi           : ${q1Text}
-2. Transisi perubahan biaya paling tajam  : ${q2Text}
-3. Total Laba/Rugi Kumulatif (jawaban)    : ${q3Text}
+1. Selisih laba bersih Minggu ke-5              : ${q1Text}
+2. Total pendapatan penjualan 5 minggu (M1–M5)  : ${q2Text}
+3. Kenaikan nominal pendapatan M1 ke M5         : ${q3Text}
 
-[B. ANALISIS EKONOMI & KEPUTUSAN (IPS)]
-1. Faktor Penyebab Kenaikan/Penurunan Belanja Produksi:
+[B. ANALISIS EKONOMI & PENGAMBILAN KEPUTUSAN (IPS)]
+1. Faktor Efisiensi Biaya Produksi:
 ${r1}
 
-2. Strategi Pemasaran untuk Menaikkan Pendapatan:
+2. Strategi Pemasaran & Peningkatan Permintaan Pasar:
 ${r2}
-
-3. Keputusan Menjelang Penutupan / Likuidasi Minggu Ke-5:
-${r3}
 ====================================================================`;
         }
 
